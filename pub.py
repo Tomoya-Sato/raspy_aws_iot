@@ -140,11 +140,12 @@ if __name__ == '__main__':
             print("Sending {} message(s)".format(message_count))
 
         publish_count = 1
+        message_count = 2000
         while (publish_count <= message_count) or (message_count == 0):
             # message = "{} [{}]".format(message_string, publish_count)
             message = "imu_data"
             print("Publishing message to topic '{}': {}".format(message_topic, message))
-            message_json = json.dumps({message: publish_count})
+            message_json = json.dumps({message: (publish_count % 100)})
             print(message_json)
             mqtt_connection.publish(
                 topic=message_topic,

@@ -7,7 +7,13 @@ import sys
 import threading
 import time
 import json
+from collections import deque
 from utils.command_line_utils import CommandLineUtils
+
+from myplot import RealtimePlot1D
+
+mutex = threading.Lock()
+d = deque()
 
 # This sample uses the Message Broker for AWS IoT to send and receive messages
 # through an MQTT connection. On startup, the device connects to the server,
@@ -53,9 +59,10 @@ def on_resubscribe_complete(resubscribe_future):
 # Callback when the subscribed topic receives a message
 def on_message_received(topic, payload, dup, qos, retain, **kwargs):
     data = json.loads(payload)
-    print(data)
     print(data["imu_data"])
     print("Received message from topic '{}': {}".format(topic, payload))
+    with mutex:
+        d.append(float(data["imu_data"]))
     global received_count
     received_count += 1
     if received_count == cmdData.input_count:
@@ -84,6 +91,8 @@ if __name__ == '__main__':
         proxy_options = http.HttpProxyOptions(
             host_name=cmdData.input_proxy_host,
             port=cmdData.input_proxy_port)
+
+    realtime_plot1d = RealtimePlot1D(0.1, 1000)
 
 
     print("endpoint")
@@ -158,6 +167,11 @@ if __name__ == '__main__':
     if message_count != 0 and not received_all_event.is_set():
         print("Waiting for all messages to be received...")
 
+    while True:
+        with mutex:
+            if len(d) > 0:
+                data = d.popleft()
+                realtime_plot1d.update(data)
     received_all_event.wait()
     print("{} message(s) received.".format(received_count))
 
